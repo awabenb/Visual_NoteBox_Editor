@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我的世界可视化音符盒编辑器</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%233c2f23'/%3E%3Crect x='8' y='30' width='48' height='26' rx='6' fill='%23b5793f'/%3E%3Crect x='8' y='30' width='48' height='8' rx='4' fill='%238a5a2a'/%3E%3Crect x='16' y='8' width='32' height='22' rx='5' fill='%237bd84e'/%3E%3Crect x='14' y='26' width='36' height='7' rx='3' fill='%238a5a2a'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#12151b; --bg2:#171b23; --panel:#1c212b; --panel2:#232936;
+  --line:#2c3342; --line2:#39415a;
+  --text:#e8edf5; --muted:#93a0b5; --dim:#6b7689;
+  --accent:#7bd84e; --accent-d:#5abf33; --accent-ink:#0f2410;
+  --danger:#ff5d5d; --warn:#ffb43a; --info:#4db8ff;
+  --keyw:66px; --rulerh:30px; --rowh:18px;
+  --radius:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{
+  background:radial-gradient(1200px 600px at 20% -10%, #1b2331 0%, var(--bg) 55%);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+  font-size:14px; overflow:hidden;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.hidden{display:none!important}
+
+/* ===== 顶栏 ===== */
+.topbar{
+  height:58px; display:flex; align-items:center; gap:14px; padding:0 16px;
+  background:linear-gradient(180deg,#1e2430,#171b23); border-bottom:1px solid var(--line);
+  position:relative; z-index:5;
+}
+.brand{display:flex;align-items:center;gap:10px;min-width:220px}
+.brand .logo{width:32px;height:32px;border-radius:7px;background:#3c2f23;position:relative;overflow:hidden;flex:none;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.brand .logo::before{content:"";position:absolute;left:6px;right:6px;top:6px;height:20px;border-radius:4px;background:#7bd84e;box-shadow:inset 0 -6px 0 rgba(0,0,0,.15)}
+.brand .logo::after{content:"";position:absolute;left:6px;right:6px;bottom:5px;height:5px;border-radius:3px;background:#8a5a2a}
+.brand h1{font-size:15px;margin:0;letter-spacing:.3px}
+.brand .sub{font-size:11px;color:var(--muted);margin-top:1px}
+.transport{display:flex;align-items:center;gap:8px}
+.tbtn{
+  width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  background:var(--panel2);border:1px solid var(--line);transition:.12s;
+}
+.tbtn:hover{background:#2d3545;border-color:var(--line2)}
+.tbtn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tbtn.primary:hover{background:var(--accent-d)}
+.tbtn svg{width:20px;height:20px;fill:currentColor}
+.tbtn.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.flag{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap}
+.flag input{accent-color:var(--accent)}
+.sep{width:1px;height:26px;background:var(--line)}
+.posbox{font-variant-numeric:tabular-nums;font-size:13px;color:var(--text);min-width:150px}
+.posbox b{color:var(--accent)}
+.tempo{display:flex;align-items:center;gap:6px}
+.tempo label{font-size:12px;color:var(--muted)}
+.tempo input{
+  width:58px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--text);
+  padding:5px 8px;font-size:13px;text-align:center;
+}
+.spacer{flex:1}
+
+/* ===== 主布局 ===== */
+.main{display:flex;height:calc(100% - 58px)}
+.panel{
+  background:var(--panel);border-right:1px solid var(--line);
+  width:250px;flex:none;overflow-y:auto;display:flex;flex-direction:column;
+}
+.panel h2{font-size:11px;letter-spacing:1.2px;color:var(--dim);text-transform:uppercase;margin:14px 14px 8px}
+
+/* 轨道 */
+.tracklist{flex:1;overflow-y:auto;padding:0 8px 8px}
+.track{
+  border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:var(--bg2);
+  overflow:hidden;
+}
+.track-head{display:flex;align-items:center;gap:6px;padding:6px 8px;cursor:pointer}
+.track-head.sel{outline:2px solid var(--accent)}
+.track-flag{width:30px;height:26px;border-radius:6px;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+.track-name{flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track-name input{width:100%;background:transparent;border:none;color:var(--text);font-size:13px;border-bottom:1px dashed transparent}
+.track-name input:focus{border-bottom:1px dashed var(--line2);outline:none}
+.track-ctrl{display:flex;gap:2px;align-items:center}
+.tc{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line)}
+.tc.on{color:var(--danger);border-color:var(--danger)}
+.tc.solo.on{color:var(--accent);border-color:var(--accent)}
+.tc:hover{color:var(--text)}
+.track-body{padding:4px 8px 8px;display:flex;flex-direction:column;gap:6px}
+.track-body select{
+  width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);
+  border-radius:6px;padding:5px 6px;font-size:12px;
+}
+.track-count{font-size:11px;color:var(--dim)}
+.addtrack{
+  display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;margin-top:4px;
+  border:1px dashed var(--line2);border-radius:8px;color:var(--muted);font-size:13px;
+}
+.addtrack:hover{color:var(--accent);border-color:var(--accent)}
+.track.dim{opacity:.45}
+
+/* ===== 钢琴卷帘 ===== */
+.rollwrap{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
+.roll-top{height:52px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--bg2)}
+.tool{display:flex;align-items:center;gap:4px}
+.tool .tc2{width:34px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.tool .tc2.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tool .tc2.disabled{opacity:.35;pointer-events:none}
+.tool .tc2 svg{width:16px;height:16px;fill:currentColor}
+.zoom{display:flex;align-items:center;gap:4px}
+.zoom button{width:26px;height:26px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);font-size:14px}
+.zoom button:hover{color:var(--text)}
+.hint{font-size:11px;color:var(--dim);margin-left:auto;white-space:nowrap}
+
+.roll-scroll{flex:1;overflow:auto;background:
+  repeating-linear-gradient(0deg, transparent 0 39px, rgba(255,255,255,.02) 39px 40px);
+  cursor:crosshair; position:relative}
+canvas#pr{display:block}
+.toolbar-noteinfo{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.note-badge{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 8px;color:var(--text)}
+
+/* ===== 右侧设置/导出 ===== */
+.panel.right{border-right:none;border-left:1px solid var(--line);width:300px}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 14px 10px}
+.set-row label{font-size:12px;color:var(--muted)}
+.set-row input[type=number],.set-row select{
+  width:92px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--text);
+  padding:5px 7px;font-size:13px;
+}
+.exp-sec{border-top:1px solid var(--line);padding-top:12px}
+.exp-label{font-size:11px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;margin:12px 14px 8px}
+.exp-field{margin:0 14px 8px}
+.exp-field label{display:block;font-size:11px;color:var(--dim);margin-bottom:3px}
+.exp-field input,.exp-field select{
+  width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--text);
+  padding:6px 8px;font-size:13px;
+}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;width:calc(100% - 28px);margin:0 14px 8px;
+  padding:10px;border-radius:8px;font-size:13px;font-weight:600;
+  background:var(--accent);color:var(--accent-ink);
+}
+.btn:hover{background:var(--accent-d)}
+.btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line2)}
+.btn.ghost:hover{background:#2d3545}
+.btn.warn{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.btn.warn:hover{background:rgba(255,93,93,.12)}
+.fileline{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--muted);margin:0 14px 4px;word-break:break-all}
+.guide{font-size:12px;color:var(--muted);line-height:1.7;margin:0 14px 8px}
+.guide b{color:var(--text)}
+.guide code{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:11px;color:var(--accent)}
+.note-warn{font-size:11px;color:var(--warn);margin:4px 14px;line-height:1.5}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;z-index:60;
+  background:#232a37;border:1px solid var(--line2);border-left:3px solid var(--accent);border-radius:8px;
+  padding:10px 16px;font-size:13px;max-width:70vw;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.err{border-left-color:var(--danger)}
+
+/* 响应式 */
+@media (max-width:980px){
+  .panel{width:220px}
+  .panel.right{width:250px}
+  .hint{display:none}
+  .brand{min-width:0}
+  .brand .sub{display:none}
+  input,select,.track-name input{font-size:16px!important}
+  .set-row input[type=number],.set-row select{width:120px}
+  .tempo input{width:64px}
+}
+@media (max-width:720px){
+  body{overflow:auto}
+  .topbar{flex-wrap:wrap;height:auto;padding:10px;gap:8px}
+  .main{flex-direction:column;height:auto;min-height:0}
+  .panel{width:100%;border-right:none;border-bottom:1px solid var(--line);max-height:240px}
+  .panel.right{order:-1;border-left:none;max-height:none}
+  .rollwrap{height:560px}
+  .posbox{min-width:0}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo" aria-hidden="true"></div>
+    <div>
+      <h1>可视化音符盒编辑器</h1>
+      <div class="sub">基于Java版MC数据包的可视化音乐编辑工具</div>
+    </div>
+  </div>
+
+  <div class="transport">
+    <button id="btnPlay" class="tbtn primary" title="播放 / 暂停 (空格)" aria-label="播放">
+      <svg id="icoPlay" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <button id="btnStop" class="tbtn" title="停止 (Shift+空格)" aria-label="停止">
+      <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+    </button>
+    <span class="flag"><input type="checkbox" id="chkLoop" checked><label for="chkLoop">循环</label></span>
+    <span class="flag"><input type="checkbox" id="chkMetro"><label for="chkMetro">节拍器</label></span>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="tempo">
+    <label>BPM</label>
+    <input type="number" id="bpm" value="120" min="30" max="300" step="1">
+  </div>
+
+  <div class="sep"></div>
+  <div class="posbox">小节 <b id="posBar">1</b> · 拍 <b id="posBeat">1</b> · 格 <b id="posTick">0</b> / <span id="posTotal">0</span></div>
+  <div class="spacer"></div>
+</header>
+
+<div class="main">
+  <!-- 左：轨道 -->
+  <aside class="panel">
+    <h2>轨道 / 乐器</h2>
+    <div class="tracklist" id="trackList"></div>
+    <div style="padding:0 14px 14px">
+      <button id="btnAddTrack" class="addtrack">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
+        添加轨道
+      </button>
+    </div>
+  </aside>
+
+  <!-- 中：钢琴卷帘 -->
+  <section class="rollwrap">
+    <div class="roll-top">
+      <div class="tool">
+        <button id="btnUndo" class="tc2" title="撤销 (Ctrl+Z)" aria-label="撤销">
+          <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+        </button>
+        <button id="btnRedo" class="tc2" title="重做 (Ctrl+Y)" aria-label="重做">
+          <svg viewBox="0 0 24 24"><path d="M11.5 8c2.65 0 5.05.99 6.9 2.6L22 7v9h-9l3.62-3.62c-1.39-1.16-3.16-1.88-5.12-1.88-3.54 0-6.55 2.31-7.6 5.5l-2.37-.78C3.92 11.03 7.85 8 11.5 8z"/></svg>
+        </button>
+        <button id="toolPencil" class="tc2 active" title="画笔：点击/拖拽画音符" aria-label="画笔">
+          <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+        </button>
+        <button id="toolErase" class="tc2" title="橡皮：点击/拖拽擦除" aria-label="橡皮">
+          <svg viewBox="0 0 24 24"><path d="M16.24 3.56a2 2 0 0 0-2.83 0L3 13.87a2 2 0 0 0 0 2.83l4.24 4.24c.78.78 2.05.78 2.83 0l10.4-10.41a2 2 0 0 0 0-2.83l-4.23-4.14zM5.41 14.99l8.48-8.48 4.6 4.6-8.48 8.48-4.6-4.6zM4.29 21l-1.5-1.5 3-3 2.12 2.12-2.83 2.38z"/></svg>
+        </button>
+      </div>
+      <div class="zoom">
+        <button id="zoomOut" title="缩小">−</button>
+        <button id="zoomIn" title="放大">＋</button>
+      </div>
+      <span class="flag" title="画音符时立即试听"><input type="checkbox" id="chkPreview" checked><label for="chkPreview">落笔试听</label></span>
+      <div class="toolbar-noteinfo">
+        <span>乐器：<span class="note-badge" id="curInstBadge"></span></span>
+      </div>
+      <div class="hint">左键/拖拽=添加音符　右键或Shift=擦除音符　空格=播放/暂停　Ctrl+Z=撤销　Ctrl+Y=重做</div>
+    </div>
+    <div class="roll-scroll" id="scrollBox">
+      <canvas id="pr"></canvas>
+    </div>
+  </section>
+
+  <!-- 右：设置与导出 -->
+  <aside class="panel right">
+    <h2>网格</h2>
+    <div class="set-row"><label>拍数（总时长）</label><input type="number" id="beats" value="16" min="1" max="128"></div>
+    <div class="set-row"><label>每拍格数</label>
+      <select id="tpb"><option value="1">1（四分音符）</option><option value="2">2（八分）</option><option value="4" selected>4（十六分）</option><option value="8">8（三十二分）</option><option value="16">16</option></select>
+    </div>
+    <div class="set-row"><label>最低音</label>
+      <select id="baseNote">
+        <option value="0" selected>F#3（原版最低）</option><option value="-1">F3</option><option value="-2">E3</option>
+        <option value="-3">D#3</option><option value="-4">D3</option><option value="-6">C3</option><option value="-12">C2</option>
+      </select>
+    </div>
+    <div class="exp-sec">
+      <div class="exp-label">导出 mcfunction 数据包</div>
+      <div class="exp-field"><label>数据包命名空间</label><input id="ns" value="noteblk" maxlength="24" spellcheck="false"></div>
+      <div class="exp-field"><label>歌曲名</label><input id="songName" value="mysong" maxlength="24" spellcheck="false"></div>
+      <div class="exp-field"><label>游戏版本（pack_format）</label>
+        <select id="pf">
+          <option value="48" selected>1.21（48）</option><option value="34">1.20.5+（34）</option>
+          <option value="15">1.20（15）</option><option value="13">1.19.4（13）</option><option value="10">1.19（10）</option>
+          <option value="9">1.18（9）</option><option value="7">1.17（7）</option><option value="6">1.16.2（6）</option>
+          <option value="4">1.13~1.14（4）</option>
+        </select>
+      </div>
+      <div class="exp-field"><label>循环播放</label>
+        <select id="expLoop"><option value="1" selected>是</option><option value="0">否（播完停止）</option></select>
+      </div>
+      <div id="clampWarn" class="note-warn hidden"></div>
+      <button id="btnZip" class="btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.2l-3-3-1.4 1.4L12 16l4.4-4.4L15 10.2l-3 3V3h2V1h-4v2h2zm-7 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5h-2v5H7v-5H5z"/></svg>下载数据包 (.zip)</button>
+      <button id="btnCopyInit" class="btn ghost">复制安装命令</button>
+      <button id="btnCopyTick" class="btn ghost">复制音乐函数内容</button>
+      <div class="guide" style="margin-top:6px">
+        <b>安装步骤</b><br>
+        1. 下载数据包<br>
+        2. 将数据包放入<code>"版本名称/世界名称/datapacks"</code><br>
+        3. 进入世界后输入 <code>/reload</code><br>
+        4. 输入 <code>/function noteblk:init</code> 放置机器<br>
+        5. 输入 <code>/function noteblk:play</code> 播放，<code>/function noteblk:stop</code> 停止<br>
+      </div>
+      <button id="btnLoadDemo" class="btn ghost">载入示例乐曲</button>
+      <button id="btnClearAll" class="btn warn">清空所有音符</button>
+    </div>
+  </aside>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* =========================================================
+ *  数据：乐器、音高、颜色
+ * ========================================================= */
+const INSTRUMENTS = [
+  {id:'harp',            name:'竖琴 / 钢琴',  sound:'block.note_block.harp',             fixed:false, cat:'主旋律', color:'#7bd84e'},
+  {id:'bass',            name:'贝斯',         sound:'block.note_block.bass',             fixed:false, cat:'贝斯',   color:'#4db8ff'},
+  {id:'basedrum',        name:'大鼓',         sound:'block.note_block.basedrum',         fixed:false, cat:'打击',   color:'#ff7a45'},
+  {id:'snare',           name:'军鼓',         sound:'block.note_block.snare',            fixed:false, cat:'打击',   color:'#c9c9c9'},
+  {id:'hat',             name:'踩镲',         sound:'block.note_block.hat',              fixed:false, cat:'打击',   color:'#f5d061'},
+  {id:'flute',           name:'长笛',         sound:'block.note_block.flute',            fixed:false, cat:'旋律',   color:'#ffb43a'},
+  {id:'bell',            name:'铃铛',         sound:'block.note_block.bell',             fixed:false, cat:'旋律',   color:'#ff5d8f'},
+  {id:'chime',           name:'管钟',         sound:'block.note_block.chime',            fixed:false, cat:'旋律',   color:'#b39dff'},
+  {id:'guitar',          name:'吉他',         sound:'block.note_block.guitar',           fixed:false, cat:'旋律',   color:'#e08bff'},
+  {id:'xylophone',       name:'木琴',         sound:'block.note_block.xylophone',        fixed:false, cat:'旋律',   color:'#5be7d6'},
+  {id:'iron_xylophone',  name:'铁木琴',       sound:'block.note_block.iron_xylophone',   fixed:false, cat:'旋律',   color:'#9fb0c9'},
+  {id:'cow_bell',        name:'牛铃',         sound:'block.note_block.cow_bell',         fixed:false, cat:'旋律',   color:'#f5a623'},
+  {id:'didgeridoo',      name:'迪吉里杜管',   sound:'block.note_block.didgeridoo',       fixed:false, cat:'贝斯',   color:'#8d6e63'},
+  {id:'bit',             name:'芯片（方波）', sound:'block.note_block.bit',              fixed:false, cat:'旋律',   color:'#7ee0ff'},
+  {id:'banjo',           name:'班卓琴',       sound:'block.note_block.banjo',            fixed:false, cat:'旋律',   color:'#f4d08a'},
+  {id:'pling',           name:'扣弦（电钢）', sound:'block.note_block.pling',            fixed:false, cat:'旋律',   color:'#ff9d5c'},
+  {id:'zombie',          name:'僵尸',         sound:'block.note_block.imitate.zombie',   fixed:true,  cat:'生物',   color:'#6ec97c'},
+  {id:'skeleton',        name:'骷髅',         sound:'block.note_block.imitate.skeleton', fixed:true,  cat:'生物',   color:'#c9d3dc'},
+  {id:'creeper',         name:'苦力怕',       sound:'block.note_block.imitate.creeper',  fixed:true,  cat:'生物',   color:'#8fef5a'},
+  {id:'dragon',          name:'末影龙',       sound:'block.note_block.imitate.ender_dragon', fixed:true, cat:'生物', color:'#b78df2'},
+  {id:'wither_skeleton', name:'凋灵骷髅',     sound:'block.note_block.imitate.wither_skeleton', fixed:true, cat:'生物', color:'#3b4d3f'},
+  {id:'piglin',          name:'猪灵',         sound:'block.note_block.imitate.piglin',   fixed:true,  cat:'生物',   color:'#f2b26b'}
+];
+const NOTE_NAMES = ['F#3','G3','G#3','A3','A#3','B3','C4','C#4','D4','D#4','E4','F4','F#4','G4','G#4','A4','A#4','B4','C5','C#5','D5','D#5','E5','F5','F#5'];
+const NOTE_COLORS = ['#77D700','#95C000','#B2A500','#CC8600','#E26500','#F34100','#FC1E00','#FE000F','#F70033','#E8005A','#CF0083','#AE00A9','#8600CC','#5B00E7','#2D00F9','#020AFE','#0037F6','#0068E0','#009ABC','#00C68D','#00E958','#00FC21','#1FFC00','#59E800','#94C100'];
+const PITCHES = [0.5,0.529732,0.561231,0.594604,0.629961,0.667420,0.707107,0.749154,0.793701,0.840896,0.890899,0.943874,1.0,1.059463,1.122462,1.189207,1.259921,1.334840,1.414214,1.498307,1.587401,1.681793,1.781797,1.887749,2.0];
+const ROWS = 25; // F#3 .. F#5
+const midiOfRow = r => 54 + r; // F#3 = MIDI 54
+const freqOfRow = r => 440 * Math.pow(2, (midiOfRow(r) - 69) / 12);
+
+/* =========================================================
+ *  状态
+ * ========================================================= */
+let tracks = [];
+let selected = 0;
+let nextId = 1;
+let state = {
+  bpm:120, tpb:4, beats:16, baseNote:0,
+  tool:'pencil', zoom:26,
+  playing:false, playhead:0, loop:true, metronome:false, preview:true,
+  lastScheduledTick:-1,
+};
+const instById = id => INSTRUMENTS.find(i=>i.id===id);
+// 音符盒乐器 → 下方乐器方块（决定乐器音色）
+const SUPPORT_BLOCKS={
+  harp:'minecraft:dirt', basedrum:'minecraft:stone', snare:'minecraft:sand', hat:'minecraft:glass',
+  bass:'minecraft:oak_planks', flute:'minecraft:clay', bell:'minecraft:gold_block', guitar:'minecraft:white_wool',
+  chime:'minecraft:packed_ice', xylophone:'minecraft:bone_block', iron_xylophone:'minecraft:iron_block',
+  cow_bell:'minecraft:soul_sand', didgeridoo:'minecraft:pumpkin', bit:'minecraft:emerald_block',
+  banjo:'minecraft:hay_block', pling:'minecraft:glowstone'
+};
+// 生物乐器 → 放置在音符盒上方的头颅
+const HEAD_BLOCKS={
+  zombie:'minecraft:zombie_head', skeleton:'minecraft:skeleton_skull', creeper:'minecraft:creeper_head',
+  dragon:'minecraft:dragon_head', wither_skeleton:'minecraft:wither_skeleton_skull', piglin:'minecraft:piglin_head'
+};
+
+/* =========================================================
+ *  撤销 / 重做（快照式历史栈）
+ * ========================================================= */
+let history=[], histIdx=-1;
+const MAX_HIST=100;
+let gestureHist=false;
+function snapState(){
+  return {tracks:tracks.map(t=>({id:t.id,name:t.name,instrument:t.instrument,muted:t.muted,solo:t.solo,notes:[...t.notes]})),
+          selected, grid:{bpm:state.bpm,tpb:state.tpb,beats:state.beats,baseNote:state.baseNote}};
+}
+function commitHistory(){
+  history=history.slice(0,histIdx+1);
+  history.push(snapState());
+  if(history.length>MAX_HIST)history.shift();
+  histIdx=history.length-1;
+  updateHistBtns();
+}
+function applySnapshot(s){
+  tracks=s.tracks.map(t=>({...t,notes:new Set(t.notes)}));
+  selected=Math.min(s.selected,Math.max(0,tracks.length-1));
+  Object.assign(state,s.grid);
+  nextId=(tracks.length?Math.max(...tracks.map(t=>t.id)):0)+1;
+  ['beats','tpb','bpm','baseNote'].forEach(k=>{const el=document.getElementById(k); if(el)el.value=state[k];});
+  renderTracks(); renderGrid(); updateInstBadge(); updatePos();
+}
+function beginGesture(){ gestureHist=false; }
+function ensureHist(){ if(!gestureHist){ commitHistory(); gestureHist=true; } }
+function undo(){
+  if(histIdx>0){ histIdx--; applySnapshot(history[histIdx]); toast('已撤销'); }
+  else toast('没有可撤销的操作',true);
+  updateHistBtns();
+}
+function redo(){
+  if(histIdx<history.length-1){ histIdx++; applySnapshot(history[histIdx]); toast('已重做'); }
+  else toast('没有可重做的操作',true);
+  updateHistBtns();
+}
+function updateHistBtns(){
+  const u=document.getElementById('btnUndo'), r=document.getElementById('btnRedo');
+  if(u)u.classList.toggle('disabled',histIdx<=0);
+  if(r)r.classList.toggle('disabled',histIdx>=history.length-1);
+}
+
+function newTrack(){
+  const t = { id:nextId++, name:'轨道 '+(tracks.length+1), instrument:'harp', notes:new Set(), muted:false, solo:false };
+  tracks.push(t); return t;
+}
+function seedDemo(){
+  tracks = []; selected = 0; nextId = 1;
+  state.beats = 16; $('beats').value = 16;
+  const mel = newTrack(); mel.name='旋律·竖琴'; mel.instrument='harp';
+  const bas = newTrack(); bas.name='贝斯'; bas.instrument='bass';
+  const drm = newTrack(); drm.name='大鼓'; drm.instrument='basedrum';
+  const hat = newTrack(); hat.name='踩镲'; hat.instrument='hat';
+  const add=(tr,tk,row)=>{ tr.notes.add(tk+':'+row); };
+  // C 大调：C4=行6，共 16 拍（64 tick，tpb=4）
+  const melSeq=[6,8,10,8, 6,5,3,1, 3,5,8,10, 12,10,8,6];
+  melSeq.forEach((row,beat)=>{ add(mel, beat*4, row); });
+  const bassRow=[3,1,0,0, 3,1,5,3, 3,1,0,0, 6,5,3,1];
+  bassRow.forEach((row,beat)=>{ add(bas, beat*4, row); });
+  for(let b=0;b<16;b++) add(drm, b*4, 0);       // 大鼓：每拍
+  for(let i=0;i<64;i++) if(i%2===0) add(hat, i, 3); // 踩镲：每半拍
+  renderTracks(); renderGrid(); updateInstBadge(); updatePos();
+  commitHistory();
+  toast('已载入示例乐曲（4 小节 · 16 拍）');
+}
+function clearAll(){
+  if(!tracks.length){toast('当前没有音符',true);return;}
+  tracks.forEach(t=>t.notes.clear()); commitHistory(); renderGrid(); toast('已清空所有音符');
+}
+
+/* =========================================================
+ *  派生参数
+ * ========================================================= */
+const totalTicks = () => state.beats * state.tpb;
+const tickDur = () => 60 / state.bpm / state.tpb; // 秒
+const rowOfGlobal = localRow => localRow + state.baseNote; // 全局音高行(0..24 可能越界)
+
+/* =========================================================
+ *  渲染：轨道列表
+ * ========================================================= */
+const listEl = document.getElementById('trackList');
+function renderTracks(){
+  listEl.innerHTML='';
+  const anySolo = tracks.some(t=>t.solo);
+  tracks.forEach((t,i)=>{
+    const inst = instById(t.instrument);
+    const li = document.createElement('div');
+    li.className='track'+(i===selected?'':'')+( (anySolo&&!t.solo)||t.muted ?' dim':'');
+    const head = document.createElement('div');
+    head.className='track-head'+(i===selected?' sel':'');
+    head.onclick=()=>{selected=i;renderTracks();renderGrid();updateInstBadge();};
+    const flag = document.createElement('div');
+    flag.className='track-flag'; flag.style.background=inst.color;
+    flag.textContent=t.name.replace('轨道','').slice(0,1)||'M';
+    flag.onclick=e=>{e.stopPropagation();};
+    const nm = document.createElement('div'); nm.className='track-name';
+    const inp = document.createElement('input'); inp.value=t.name; inp.maxLength=20;
+    inp.onclick=e=>e.stopPropagation();
+    inp.onchange=()=>{t.name=inp.value.trim()||t.name;renderTracks();commitHistory();};
+    nm.appendChild(inp);
+    const ctrl = document.createElement('div'); ctrl.className='track-ctrl';
+    const mBtn=document.createElement('button'); mBtn.className='tc'+(t.muted?' on':''); mBtn.title='静音';
+    mBtn.textContent='M';
+    mBtn.onclick=e=>{e.stopPropagation();t.muted=!t.muted;renderTracks();};
+    const sBtn=document.createElement('button'); sBtn.className='tc solo'+(t.solo?' on':''); sBtn.title='独奏';
+    sBtn.textContent='S';
+    sBtn.onclick=e=>{e.stopPropagation();t.solo=!t.solo;renderTracks();};
+    const dBtn=document.createElement('button'); dBtn.className='tc'; dBtn.title='删除轨道'; dBtn.setAttribute('aria-label','删除轨道');
+    dBtn.innerHTML='<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    dBtn.onclick=e=>{e.stopPropagation(); if(tracks.length<=1){toast('至少保留一条轨道',true);return;} tracks.splice(i,1); if(selected>=tracks.length)selected=tracks.length-1; renderTracks(); renderGrid(); updateInstBadge(); commitHistory();};
+    ctrl.append(mBtn,sBtn,dBtn);
+    head.append(flag,nm,ctrl);
+    li.appendChild(head);
+    const body = document.createElement('div'); body.className='track-body';
+    const sel = document.createElement('select');
+    ['主旋律','贝斯','打击','旋律','生物'].forEach(cat=>{
+      const g=document.createElement('optgroup'); g.label=cat;
+      INSTRUMENTS.filter(x=>x.cat===cat).forEach(x=>{
+        const o=document.createElement('option'); o.value=x.id; o.textContent=x.name+(x.fixed?' (固定音高)':'');
+        if(x.id===t.instrument)o.selected=true; g.appendChild(o);
+      });
+      sel.appendChild(g);
+    });
+    sel.onchange=e=>{t.instrument=e.target.value; renderTracks(); updateInstBadge(); commitHistory(); };
+    const cnt=document.createElement('div'); cnt.className='track-count';
+    const refresh=()=>{cnt.textContent=t.notes.size+' 个音符';};
+    refresh();
+    t._refreshCnt=refresh;
+    body.append(sel,cnt);
+    li.appendChild(body);
+    listEl.appendChild(li);
+  });
+}
+function updateInstBadge(){
+  const t=tracks[selected]; const inst=instById(t.instrument);
+  const b=document.getElementById('curInstBadge');
+  b.style.borderColor=inst.color; b.style.color=inst.color;
+  b.textContent=inst.name+(inst.fixed?'（固定音高）':'');
+}
+
+/* =========================================================
+ *  钢琴卷帘（Canvas）
+ * ========================================================= */
+const canvas=document.getElementById('pr');
+const ctx=canvas.getContext('2d');
+const scrollBox=document.getElementById('scrollBox');
+const KEYW=66, RULERH=30, ROWH=18;
+let cellW=26, cellH=ROWH;
+
+function metrics(){
+  const cols=totalTicks();
+  const rows=ROWS;
+  return {cols,rows,W:KEYW+cols*cellW,H:RULERH+rows*cellH};
+}
+function resizeCanvas(){
+  const {W,H}=metrics();
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+function visibleTracks(){
+  const anySolo=tracks.some(t=>t.solo);
+  return tracks.filter(t=>!t.muted && !(anySolo&&!t.solo));
+}
+
+function renderGrid(){
+  resizeCanvas();
+  const {cols,rows,W,H}=metrics();
+  const gx0=KEYW, gy0=RULERH;
+  // 背景
+  ctx.fillStyle='#151922'; ctx.fillRect(0,0,W,H);
+  // 网格
+  for(let r=0;r<rows;r++){
+    const y=gy0+r*cellH;
+    const isBlack=NOTE_NAMES[r].includes('#');
+    ctx.fillStyle=isBlack? 'rgba(0,0,0,.22)':'rgba(255,255,255,.025)';
+    ctx.fillRect(gx0,y,cols*cellW,cellH);
+    ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(gx0,y+cellH); ctx.lineTo(W,y+cellH); ctx.stroke();
+  }
+  // 列线：拍/格
+  ctx.strokeStyle='rgba(255,255,255,.08)';
+  for(let c=0;c<=cols;c++){
+    const x=gx0+c*cellW;
+    ctx.beginPath(); ctx.moveTo(x,gy0); ctx.lineTo(x,H); ctx.stroke();
+  }
+  ctx.strokeStyle='rgba(255,255,255,.18)';
+  for(let b=0;b<=state.beats;b++){
+    const x=gx0+b*state.tpb*cellW;
+    ctx.beginPath(); ctx.moveTo(x,gy0); ctx.lineTo(x,H); ctx.stroke();
+  }
+  // 音符
+  const vis=visibleTracks();
+  vis.forEach(t=>{
+    const inst=instById(t.instrument);
+    t.notes.forEach(key=>{
+      const [tkStr,rowStr]=key.split(':');
+      const tk=+tkStr, lr=+rowStr;
+      if(tk<0||tk>=cols||lr<0||lr>=rows)return;
+      const x=gx0+tk*cellW, y=gy0+lr*cellH;
+      const isSel=tracks[selected]===t;
+      ctx.fillStyle=inst.color;
+      ctx.fillRect(x+1,y+1,cellW-2,cellH-2);
+      ctx.fillStyle='rgba(255,255,255,.25)';
+      ctx.fillRect(x+1,y+1,cellW-2,Math.max(2,cellH*.3));
+      if(isSel){
+        ctx.strokeStyle='#fff'; ctx.lineWidth=1.5;
+        ctx.strokeRect(x+1,y+1,cellW-2,cellH-2);
+      }
+    });
+  });
+  // 左侧键盘
+  ctx.fillStyle='#0e1117'; ctx.fillRect(0,0,KEYW,H);
+  for(let r=0;r<rows;r++){
+    const y=gy0+r*cellH;
+    const black=NOTE_NAMES[r].includes('♯');
+    ctx.fillStyle=black? '#1b1f27':'#272d3a';
+    ctx.fillRect(0,y,KEYW,cellH);
+    ctx.fillStyle='#fff'; ctx.fillStyle=NOTE_COLORS[r];
+    ctx.font='600 10px -apple-system,"Microsoft YaHei",sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(NOTE_NAMES[r], KEYW/2, y+cellH/2);
+    ctx.strokeStyle='rgba(0,0,0,.4)'; ctx.lineWidth=1;
+    ctx.strokeRect(0,y,KEYW,cellH);
+  }
+  // 顶部拍标尺
+  ctx.fillStyle='#10141b'; ctx.fillRect(gx0,0,cols*cellW,RULERH);
+  ctx.strokeStyle='rgba(255,255,255,.12)';
+  ctx.beginPath(); ctx.moveTo(0,RULERH); ctx.lineTo(W,RULERH); ctx.stroke();
+  for(let b=0;b<state.beats;b++){
+    const x=gx0+b*state.tpb*cellW;
+    ctx.fillStyle='#8a97ad';
+    ctx.font='600 10px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(String(b+1), x+3, 4);
+    for(let s=1;s<state.tpb;s++){
+      const sx=x+s*cellW;
+      ctx.strokeStyle='rgba(255,255,255,.15)';
+      ctx.beginPath(); ctx.moveTo(sx,RULERH-6); ctx.lineTo(sx,RULERH); ctx.stroke();
+    }
+    ctx.fillStyle='#f2c94c'; ctx.fillRect(x,0,1,RULERH);
+  }
+  ctx.fillStyle='rgba(255,255,255,.35)';
+  ctx.fillRect(W-1,0,1,H);
+  drawPlayhead();
+}
+
+function drawPlayhead(){
+  const cols=totalTicks();
+  const x=KEYW+state.playhead*cellW;
+  ctx.save();
+  ctx.fillStyle='#ff5d5d';
+  ctx.fillRect(x-1.5,0,3,metrics().H);
+  ctx.beginPath(); ctx.moveTo(x-6,RULERH); ctx.lineTo(x+6,RULERH); ctx.lineTo(x,RULERH+8); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+/* ---- 指针交互 ---- */
+let painting=false, erasing=false, lastPaintedCell=null;
+function cellFromEvent(e){
+  const rect=canvas.getBoundingClientRect();
+  const x=e.clientX-rect.left, y=e.clientY-rect.top;
+  if(x<KEYW||y<RULERH)return null;
+  const tk=Math.floor((x-KEYW)/cellW);
+  const lr=Math.floor((y-RULERH)/cellH);
+  const {cols,rows}=metrics();
+  if(tk<0||tk>=cols||lr<0||lr>=rows)return null;
+  return {tk,lr};
+}
+function paintCell(tk,lr){
+  const t=tracks[selected];
+  t.notes.add(tk+':'+lr);
+  if(t._refreshCnt)t._refreshCnt();
+  ensureHist();
+  if(state.preview) playSynth(instById(t.instrument).id, lr+state.baseNote, 0);
+  renderGrid();
+}
+canvas.addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  ensureAudio(); if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+  const cell=cellFromEvent(e);
+  if(!cell)return;
+  const erase = state.tool==='erase' || e.button===2 || e.shiftKey;
+  painting=true; erasing=erase;
+  lastPaintedCell=cell.tk+':'+cell.lr;
+  beginGesture();
+  const t=tracks[selected];
+  if(erase){ if(t.notes.has(lastPaintedCell)){t.notes.delete(lastPaintedCell); ensureHist(); t._refreshCnt&&t._refreshCnt(); renderGrid();} }
+  else { if(!t.notes.has(lastPaintedCell)){paintCell(cell.tk,cell.lr);} }
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove',e=>{
+  if(!painting)return;
+  const cell=cellFromEvent(e);
+  if(!cell)return;
+  const ck=cell.tk+':'+cell.lr;
+  if(ck===lastPaintedCell)return;
+  lastPaintedCell=ck;
+  const t=tracks[selected];
+  if(erasing){ if(t.notes.has(ck)){t.notes.delete(ck); ensureHist(); t._refreshCnt&&t._refreshCnt(); renderGrid();} }
+  else { if(!t.notes.has(ck)){paintCell(cell.tk,cell.lr);} }
+});
+const endPaint=()=>{painting=false;};
+canvas.addEventListener('pointerup',endPaint);
+canvas.addEventListener('pointercancel',endPaint);
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+scrollBox.addEventListener('scroll',()=>renderGrid());
+
+/* =========================================================
+ *  音频合成（近似音符盒音色）
+ * ========================================================= */
+let audioCtx=null, master=null;
+let noiseBuf=null;
+function ensureAudio(){
+  if(audioCtx)return;
+  audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  master=audioCtx.createGain(); master.gain.value=0.5; master.connect(audioCtx.destination);
+  const len=audioCtx.sampleRate*0.5;
+  noiseBuf=audioCtx.createBuffer(1,len,audioCtx.sampleRate);
+  const d=noiseBuf.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+}
+function tone(opts){
+  const {freq,when,dur,type='sine',peak=0.5,attack=0.005,filt=null,detune=0}=opts;
+  const t0=audioCtx.currentTime+(when||0);
+  const osc=audioCtx.createOscillator(); osc.type=type; osc.frequency.value=freq;
+  if(detune)osc.detune.value=detune;
+  const g=audioCtx.createGain();
+  const a=Math.max(0.001,attack), rel=Math.max(0.02,dur*0.3);
+  g.gain.setValueAtTime(0,t0);
+  g.gain.linearRampToValueAtTime(peak,t0+a);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur+rel);
+  let node=osc;
+  if(filt){const f=audioCtx.createBiquadFilter(); f.type=filt.type||'lowpass'; f.frequency.value=filt.freq; f.Q.value=filt.q||1; node.connect(f); node=f;}
+  node.connect(g); g.connect(master);
+  osc.start(t0); osc.stop(t0+dur+rel+0.05);
+  return {osc,g};
+}
+function noise(opts){
+  const {when,dur,peak=0.3,filt}=opts;
+  const t0=audioCtx.currentTime+(when||0);
+  const src=audioCtx.createBufferSource(); src.buffer=noiseBuf; src.loop=true;
+  const g=audioCtx.createGain();
+  g.gain.setValueAtTime(0,t0);
+  g.gain.linearRampToValueAtTime(peak,t0+0.003);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  let node=src;
+  if(filt){const f=audioCtx.createBiquadFilter(); f.type=filt.type; f.frequency.value=filt.freq; f.Q.value=filt.q||0.8; node.connect(f); node=f;}
+  node.connect(g); g.connect(master);
+  src.start(t0); src.stop(t0+dur+0.05);
+}
+function playSynth(instrument,row,when){
+  ensureAudio(); if(!audioCtx)return;
+  const freq=freqOfRow(row);
+  const w=when||0;
+  const voice=(inst)=>{
+    switch(inst){
+      case 'harp': tone({freq,when:w,dur:1.0,type:'triangle',peak:0.5}); tone({freq:freq*2,when:w,dur:0.4,type:'sine',peak:0.12}); break;
+      case 'bass': tone({freq:freq/1,when:w,dur:1.1,type:'sine',peak:0.55}); tone({freq:freq*2,when:w,dur:0.35,type:'sine',peak:0.08}); break;
+      case 'basedrum':{ const f=audioCtx.createOscillator(); f.type='sine'; const t0=audioCtx.currentTime+w; f.frequency.setValueAtTime(150,t0); f.frequency.exponentialRampToValueAtTime(42,t0+0.35); const g=audioCtx.createGain(); g.gain.setValueAtTime(0.9,t0); g.gain.exponentialRampToValueAtTime(0.001,t0+0.45); f.connect(g);g.connect(master); f.start(t0); f.stop(t0+0.5); break; }
+      case 'snare': noise({when:w,dur:0.22,peak:0.5,filt:{type:'bandpass',freq:1800,q:0.7}}); tone({freq:210,when:w,dur:0.18,type:'sine',peak:0.25}); break;
+      case 'hat': noise({when:w,dur:0.09,peak:0.35,filt:{type:'highpass',freq:6000}}); break;
+      case 'flute': tone({freq,when:w,dur:0.75,type:'sine',peak:0.55,attack:0.05}); tone({freq:freq*2,when:w,dur:0.6,type:'sine',peak:0.12,attack:0.06}); break;
+      case 'bell': tone({freq,when:w,dur:1.6,type:'sine',peak:0.4}); tone({freq:freq*2.76,when:w,dur:1.1,type:'sine',peak:0.16}); tone({freq:freq*5.4,when:w,dur:0.7,type:'sine',peak:0.08}); break;
+      case 'chime': tone({freq,when:w,dur:1.3,type:'sine',peak:0.45}); tone({freq:freq*2,when:w,dur:1.0,type:'sine',peak:0.14}); break;
+      case 'guitar': tone({freq,when:w,dur:0.7,type:'triangle',peak:0.5}); tone({freq:freq*2,when:w,dur:0.3,type:'sine',peak:0.15}); tone({freq:freq*3,when:w,dur:0.18,type:'sine',peak:0.08}); break;
+      case 'xylophone': tone({freq,when:w,dur:0.8,type:'sine',peak:0.5}); tone({freq:freq*3,when:w,dur:0.3,type:'sine',peak:0.1}); break;
+      case 'iron_xylophone': tone({freq,when:w,dur:0.9,type:'sine',peak:0.5}); tone({freq:freq*2.76,when:w,dur:0.6,type:'sine',peak:0.2}); tone({freq:freq*6.7,when:w,dur:0.3,type:'sine',peak:0.08}); break;
+      case 'cow_bell': tone({freq,when:w,dur:0.7,type:'square',peak:0.2}); tone({freq:freq*2.75,when:w,dur:0.5,type:'sine',peak:0.22}); break;
+      case 'didgeridoo': tone({freq:freq/4,when:w,dur:0.9,type:'sawtooth',peak:0.3,attack:0.05,filt:{type:'lowpass',freq:420}}); tone({freq:freq/4*2,when:w,dur:0.8,type:'sawtooth',peak:0.1,attack:0.05,filt:{type:'lowpass',freq:300}}); break;
+      case 'bit': tone({freq,when:w,dur:0.4,type:'square',peak:0.3}); tone({freq:freq*2,when:w,dur:0.2,type:'square',peak:0.12}); break;
+      case 'banjo': tone({freq,when:w,dur:0.5,type:'triangle',peak:0.5,attack:0.001}); tone({freq:freq*4,when:w,dur:0.2,type:'triangle',peak:0.12,attack:0.001}); break;
+      case 'pling': tone({freq,when:w,dur:0.35,type:'sine',peak:0.5}); break;
+      default: // 生物固定音高
+        tone({freq:freqOfRow(12),when:w,dur:0.5,type:'sawtooth',peak:0.3,attack:0.03,filt:{type:'lowpass',freq:900}});
+    }
+  };
+  voice(instrument);
+}
+
+/* =========================================================
+ *  播放调度
+ * ========================================================= */
+let schedTimer=null, lookaheadMs=22, nextTickTime=0, nextSchedTick=0;
+function startTransport(){
+  ensureAudio(); audioCtx.resume&&audioCtx.resume();
+  state.playing=true;
+  nextSchedTick=state.playhead;
+  nextTickTime=audioCtx.currentTime+0.06;
+  clearInterval(schedTimer);
+  schedTimer=setInterval(schedule,lookaheadMs);
+  updatePlayBtn();
+}
+function stopTransport(reset=true){
+  state.playing=false; clearInterval(schedTimer); schedTimer=null;
+  if(reset)state.playhead=0;
+  updatePlayBtn();
+  if(nextSchedTick!==undefined)renderGrid();
+}
+function schedule(){
+  if(!state.playing)return;
+  while(nextTickTime < audioCtx.currentTime + 0.12){
+    const tk=nextSchedTick;
+    const vis=visibleTracks();
+    vis.forEach(t=>{
+      const inst=instById(t.instrument);
+      const keyList=[...t.notes];
+      keyList.forEach(k=>{
+        const [tks,r]=k.split(':');
+        if(+tks===tk){
+          const row=+r;
+          // 预览按网格行直接播放；固定音高乐器在合成里已处理
+          playSynth(inst.id, row, Math.max(0,nextTickTime-audioCtx.currentTime));
+        }
+      });
+    });
+    if(state.metronome && tk % state.tpb===0){
+      // 节拍器
+      ensureAudio();
+      const t0=audioCtx.currentTime+Math.max(0,nextTickTime-audioCtx.currentTime);
+      const o=audioCtx.createOscillator(); o.type='square'; o.frequency.value= (tk%(state.tpb*4)===0)?1568:1200;
+      const g=audioCtx.createGain(); g.gain.setValueAtTime(0.15,t0); g.gain.exponentialRampToValueAtTime(0.001,t0+0.04);
+      o.connect(g); g.connect(master); o.start(t0); o.stop(t0+0.05);
+    }
+    // 进度
+    state.playhead=tk+1;
+    nextSchedTick=tk+1;
+    nextTickTime+=tickDur();
+    updatePos();
+    if(tk+1>=totalTicks()){
+      if(state.loop){ nextSchedTick=0; state.playhead=0; }
+      else { stopTransport(true); return; }
+    }
+  }
+  renderGrid();
+}
+function updatePos(){
+  const tk=Math.min(state.playhead,totalTicks());
+  document.getElementById('posTick').textContent=tk;
+  document.getElementById('posTotal').textContent=totalTicks();
+  const bar=Math.floor(tk/state.tpb)+1, beat=Math.floor(tk/state.tpb)%state.beats+1;
+  document.getElementById('posBar').textContent=bar;
+  document.getElementById('posBeat').textContent=beat;
+}
+function updatePlayBtn(){
+  const b=document.getElementById('icoPlay');
+  if(state.playing){ b.outerHTML='<svg id="icoPlay" viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>'; }
+  else { b.outerHTML='<svg id="icoPlay" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>'; }
+}
+
+/* =========================================================
+ *  导出 mcfunction
+ * ========================================================= */
+function sanitize(s){ return (s||'').toLowerCase().replace(/[^a-z0-9_]/g,'').slice(0,24) || 'noteblk'; }
+function buildExport(){
+  const ns=sanitize(document.getElementById('ns').value);
+  const song=sanitize(document.getElementById('songName').value)||'mysong';
+  const pf=document.getElementById('pf').value;
+  const loop=document.getElementById('expLoop').value==='1';
+  const total=totalTicks();
+  const base=state.baseNote;
+  const vis=visibleTracks();
+  let clamped=0;
+  // 收集事件：tick × 音高 × 乐器（去重），音高归位到 0..24
+  const evMap=new Map();
+  vis.forEach(t=>{
+    const inst=instById(t.instrument);
+    t.notes.forEach(k=>{
+      const [tkStr,rStr]=k.split(':');
+      const tk=+tkStr; let g=+rStr+base;
+      if(g<0){g=0;clamped++;}
+      if(g>24){g=24;clamped++;}
+      const key=tk+'|'+g+'|'+inst.id;
+      if(!evMap.has(key))evMap.set(key,{tick:tk,row:g,inst:inst});
+    });
+  });
+  const evs=[...evMap.values()].sort((a,b)=>a.tick-b.tick||(a.inst.id<b.inst.id?-1:a.inst.id>b.inst.id?1:0)||a.row-b.row);
+  const E=evs.length;
+  const cols=Math.max(1,Math.ceil(Math.sqrt(E)));
+  const rows=Math.max(1,Math.ceil(E/cols));
+  // 机器布局：X 每事件 3 格（音符盒 + 右侧红石块触发位），Z 每行 2 格
+  const X0=4, YS=2, YN=3, YH=4;
+  evs.forEach((e,n)=>{ e.pos={x:X0+3*(n%cols), z:2*Math.floor(n/cols)}; });
+  const byTick=new Map();
+  evs.forEach(e=>{ if(!byTick.has(e.tick))byTick.set(e.tick,[]); byTick.get(e.tick).push(e); });
+
+  const clampWarn=document.getElementById('clampWarn');
+  if(clamped>0){clampWarn.classList.remove('hidden'); clampWarn.textContent='注意：'+clamped+' 个音符超出 F#3~F#5 原版音域，已自动归位到边界。';}
+  else clampWarn.classList.add('hidden');
+
+  const header=`# ============================================\n#  ${song} - Minecraft 音符盒物理机器\n#  由「音符盒编辑器」生成  |  总长度: ${total} tick (${(total*tickDur()).toFixed(2)}s) @ ${state.bpm}BPM\n#  方式: setblock 建造 音符盒 + 乐器方块 + 红石触发 机器\n#  事件数: ${E}\n# ============================================\n`;
+  const ORIGIN=`@e[tag=${ns}_origin,limit=1]`;
+
+  const files={};
+  files['pack.mcmeta']=JSON.stringify({pack:{pack_format:+pf,description:`${song} - 音符盒音乐数据包 (由音符盒编辑器生成)`}},null,2);
+  files['data/minecraft/tags/functions/tick.json']=JSON.stringify({values:[`${ns}:tick`]},null,2);
+
+  // ---- init：清场 → 记号实体 → 计分板 → 建造机器 ----
+  const buildLines=[];
+  if(E>0){
+    const maxX=X0+3*(cols-1)+1, maxZ=2*(rows-1)+1;
+    buildLines.push('# 清空机器区域');
+    buildLines.push(`execute at ${ORIGIN} run fill ~${X0} ~${YS} ~0 ~${maxX} ~${YH} ~${maxZ} minecraft:air`);
+    buildLines.push(`# 建造 ${E} 个音符盒：~${YS} 乐器方块  ~${YN} 音符盒  ~${YN}+1 右侧为红石块触发位${evs.some(e=>e.inst.fixed)?'，~'+YH+' 生物头颅':''}`);
+    evs.forEach(e=>{
+      const {x,z}=e.pos;
+      buildLines.push(`execute at ${ORIGIN} run setblock ~${x} ~${YS} ~${z} ${e.inst.fixed?'minecraft:dirt':(SUPPORT_BLOCKS[e.inst.id]||'minecraft:dirt')}`);
+      buildLines.push(`execute at ${ORIGIN} run setblock ~${x} ~${YN} ~${z} minecraft:note_block{note:${e.row}}`);
+      if(e.inst.fixed && HEAD_BLOCKS[e.inst.id]) buildLines.push(`execute at ${ORIGIN} run setblock ~${x} ~${YH} ~${z} ${HEAD_BLOCKS[e.inst.id]}`);
+    });
+  }
+  files[`data/${ns}/functions/init.mcfunction`]=
+    header+
+    `# 初始化：在空旷处运行一次 /function ${ns}:init\n`+
+    `kill ${ORIGIN}\n`+
+    `summon armor_stand ~ ~ ~ {Marker:1b,Invisible:1b,NoGravity:1b,Tags:["${ns}_origin"]}\n`+
+    `scoreboard objectives add ${ns}_timer dummy\nscoreboard objectives add ${ns}_flag dummy\n`+
+    `scoreboard players set #len ${ns}_timer ${total}\nscoreboard players set #playing ${ns}_flag 0\nscoreboard players set #timer ${ns}_timer 0\n`+
+    (buildLines.length?buildLines.join('\n')+'\n':`# (没有音符，未建造)\n`)+
+    `tellraw @a {"text":"[${song}] 音符盒机器已就绪，输入 /function ${ns}:play 开始播放","color":"green"}\n`;
+
+  files[`data/${ns}/functions/play.mcfunction`]=
+    header+
+    `# 开始播放：/function ${ns}:play\nscoreboard players set #playing ${ns}_flag 1\nscoreboard players set #timer ${ns}_timer 0\ntellraw @a {"text":"[${song}] 播放开始","color":"green"}\n`;
+
+  files[`data/${ns}/functions/stop.mcfunction`]=
+    `# 停止播放：/function ${ns}:stop\nscoreboard players set #playing ${ns}_flag 0\nscoreboard players set #timer ${ns}_timer 0\ntellraw @a {"text":"[${song}] 已停止","color":"gray"}\n`;
+
+  const loopLines= loop
+    ? `execute if score #playing ${ns}_flag matches 1 if score #timer ${ns}_timer matches ${total} run scoreboard players set #timer ${ns}_timer 0\n`
+    : `execute if score #playing ${ns}_flag matches 1 if score #timer ${ns}_timer matches ${total} run scoreboard players set #playing ${ns}_flag 0\nexecute if score #playing ${ns}_flag matches 1 if score #timer ${ns}_timer matches ${total} run scoreboard players set #timer ${ns}_timer 0\n`;
+
+  // ---- tick：每 tick 在对应音符盒旁 先清空再放置红石块 触发 ----
+  const trigLines=[];
+  for(let tk=0;tk<total;tk++){
+    (byTick.get(tk)||[]).forEach(e=>{
+      const {x,z}=e.pos, gx=x+1;
+      trigLines.push(`execute if score #playing ${ns}_flag matches 1 if score #timer ${ns}_timer matches ${tk} run execute at ${ORIGIN} run setblock ~${gx} ~${YN} ~${z} minecraft:air`);
+      trigLines.push(`execute if score #playing ${ns}_flag matches 1 if score #timer ${ns}_timer matches ${tk} run execute at ${ORIGIN} run setblock ~${gx} ~${YN} ~${z} minecraft:redstone_block`);
+    });
+  }
+  files[`data/${ns}/functions/tick.mcfunction`]=
+    header+
+    `# 主循环（由 #tick 自动调用，无需手动执行）\n`+
+    `# 未播放时复位计时器\nexecute if score #playing ${ns}_flag matches 0 run scoreboard players set #timer ${ns}_timer 0\n`+
+    `# ---------- 音符触发（音符盒旁放置红石块） ----------\n`+
+    (trigLines.length?trigLines.join('\n')+'\n':`# (无音符)\n`)+
+    `# ---------- 推进计时器 ----------\nexecute if score #playing ${ns}_flag matches 1 run scoreboard players add #timer ${ns}_timer 1\n`+
+    `# ---------- 结束 / 循环 ----------\n`+loopLines;
+  return {ns,song,files,total};
+}
+
+/* ---- ZIP（STORE，无压缩）---- */
+function crc32(bytes){
+  let c,crc=0xffffffff;
+  for(let i=0;i<bytes.length;i++){ c=(crc^bytes[i])&0xff; for(let k=0;k<8;k++) c=(c&1)?(0xedb88320^(c>>>1)):(c>>>1); crc=(crc>>>8)^c; }
+  return (crc^0xffffffff)>>>0;
+}
+function makeZip(entries){
+  const enc=new TextEncoder();
+  const chunks=[], central=[];
+  let offset=0;
+  const dt=new Date();
+  const dosTime=((dt.getHours()<<11)|(dt.getMinutes()<<5)|(dt.getSeconds()>>1))&0xffff;
+  const dosDate=(((dt.getFullYear()-1980)<<9)|((dt.getMonth()+1)<<5)|dt.getDate())&0xffff;
+  entries.forEach(en=>{
+    const nameBytes=enc.encode(en.name);
+    const data=enc.encode(en.content);
+    const crc=crc32(data);
+    // local header
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);
+    lh.setUint16(4,20,true); lh.setUint16(6,0,true);
+    lh.setUint16(8,0,true); lh.setUint16(10,dosTime,true); lh.setUint16(12,dosDate,true);
+    lh.setUint32(14,crc,true); lh.setUint32(18,data.length,true); lh.setUint32(22,data.length,true);
+    lh.setUint16(26,nameBytes.length,true); lh.setUint16(28,0,true);
+    chunks.push(lh.buffer,nameBytes.buffer,data.buffer);
+    // central
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0,true);
+    ch.setUint16(10,0,true); ch.setUint16(12,dosTime,true); ch.setUint16(14,dosDate,true);
+    ch.setUint32(16,crc,true); ch.setUint32(20,data.length,true); ch.setUint32(24,data.length,true);
+    ch.setUint16(28,nameBytes.length,true);
+    ch.setUint32(42,offset,true);
+    central.push(ch.buffer,nameBytes.buffer);
+    offset+=30+nameBytes.length+data.length;
+  });
+  const cdStart=offset;
+  const cdBytes=[]; let cdLen=0;
+  central.forEach(b=>{cdBytes.push(b); cdLen+=b.byteLength;});
+  const cdChunk=new Uint8Array(cdLen); let p=0;
+  cdBytes.forEach(b=>{cdChunk.set(new Uint8Array(b),p); p+=b.byteLength;});
+  const eocd=new DataView(new ArrayBuffer(22));
+  eocd.setUint32(0,0x06054b50,true); eocd.setUint16(8,entries.length,true); eocd.setUint16(10,entries.length,true);
+  eocd.setUint32(12,cdLen,true); eocd.setUint32(16,cdStart,true);
+  chunks.push(cdChunk.buffer,eocd.buffer);
+  return new Blob(chunks,{type:'application/zip'});
+}
+function downloadZip(){
+  const {ns,song,files}=buildExport();
+  const blob=makeZip(Object.entries(files).map(([name,content])=>({name,content})));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=song+'_noteblock_datapack.zip';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  toast('已生成数据包：'+song+'_noteblock_datapack.zip');
+}
+function copyText(txt,msg){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>toast(msg)).catch(()=>{fallbackCopy(txt);toast(msg);});
+  }else{fallbackCopy(txt);toast(msg);}
+}
+function fallbackCopy(txt){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+
+/* =========================================================
+ *  UI 绑定
+ * ========================================================= */
+const $=id=>document.getElementById(id);
+function toast(msg,err){const t=$('toast');t.textContent=msg;t.classList.toggle('err',!!err);t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove('show'),2600);}
+
+$('btnPlay').onclick=()=>{ if(state.playing)stopTransport(false); else startTransport(); };
+$('btnStop').onclick=()=>stopTransport(true);
+$('chkLoop').onchange=e=>state.loop=e.target.checked;
+$('chkMetro').onchange=e=>state.metronome=e.target.checked;
+$('chkPreview').onchange=e=>state.preview=e.target.checked;
+$('bpm').onchange=e=>{const v=parseInt(e.target.value);if(v>=30&&v<=300){state.bpm=v;}else{e.target.value=state.bpm;}};
+$('beats').onchange=e=>{const v=parseInt(e.target.value);if(v>=1&&v<=128){state.beats=v;}else{e.target.value=state.beats;}renderGrid();updatePos();};
+$('tpb').onchange=e=>{state.tpb=+e.target.value;renderGrid();updatePos();};
+$('baseNote').onchange=e=>{state.baseNote=+e.target.value;renderGrid();};
+$('toolPencil').onclick=()=>{state.tool='pencil';$('toolPencil').classList.add('active');$('toolErase').classList.remove('active');};
+$('toolErase').onclick=()=>{state.tool='erase';$('toolErase').classList.add('active');$('toolPencil').classList.remove('active');};
+$('zoomIn').onclick=()=>{cellW=Math.min(52,cellW+4);renderGrid();};
+$('zoomOut').onclick=()=>{cellW=Math.max(12,cellW-4);renderGrid();};
+$('btnAddTrack').onclick=()=>{newTrack();selected=tracks.length-1;renderTracks();renderGrid();updateInstBadge();commitHistory();};
+$('btnUndo').onclick=undo;
+$('btnRedo').onclick=redo;
+$('btnLoadDemo').onclick=seedDemo;
+$('btnClearAll').onclick=clearAll;
+$('btnZip').onclick=downloadZip;
+$('btnCopyInit').onclick=()=>{const{ns,song}=buildExport();copyText(`/function ${ns}:init\n/function ${ns}:play`,'已复制安装命令（init 只需一次，play 播放）');};
+$('btnCopyTick').onclick=()=>{const{files}=buildExport();const k=Object.keys(files).find(x=>x.endsWith('tick.mcfunction'));copyText(files[k],'已复制音乐函数内容');};
+
+window.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
+  if((e.ctrlKey||e.metaKey)&&e.code==='KeyZ'){e.preventDefault(); e.shiftKey?redo():undo(); return;}
+  if((e.ctrlKey||e.metaKey)&&e.code==='KeyY'){e.preventDefault(); redo(); return;}
+  if(e.code==='Space'){e.preventDefault(); if(state.playing)stopTransport(false); else startTransport();}
+  else if(/^Digit[0-9]$/.test(e.code)){const n=+e.code.slice(5); if(n<tracks.length){selected=n;renderTracks();renderGrid();updateInstBadge();}}
+});
+window.addEventListener('keyup',e=>{if(e.code.startsWith('Shift'))state._shift=false;});
+
+/* =========================================================
+ *  启动
+ * ========================================================= */
+seedDemo();
+updateHistBtns();
+</script>
+</body>
+</html>
